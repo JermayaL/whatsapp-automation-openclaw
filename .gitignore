@@ -1,0 +1,21 @@
+# Secrets
+google-credentials.json
+processed-leads.json
+*.env
+.env
+
+# Archives
+*.tar.gz
+*.zip
+
+# Logs
+*.log
+logs/
+
+# Node
+node_modules/
+package-lock.json
+
+# OS
+.DS_Store
+Thumbs.db

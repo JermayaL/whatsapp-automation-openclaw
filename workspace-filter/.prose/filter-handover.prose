@@ -1,0 +1,100 @@
+# Filter and Handover Workflow
+# This Prose workflow qualifies leads and hands them over to human agent
+
+input phone: string
+input name: string
+
+# Define agents
+agent filter:
+  model: sonnet
+  prompt: |
+    You are a qualification assistant.
+    Ask these questions one at a time:
+    1. "Can I confirm your full name?"
+    2. "What specifically are you interested in?"
+    3. "Is this time-sensitive?"
+    4. "Is this for personal or business use?"
+    5. "Do you have a budget range in mind?"
+    
+    Wait for their answer after each question.
+    Keep responses short (1-2 sentences).
+    Be friendly and professional.
+
+agent summarizer:
+  model: sonnet
+  prompt: |
+    Summarize the lead qualification conversation.
+    Extract: name, need, urgency, context, budget.
+    Format as bullet points.
+
+# Main workflow
+step greet:
+  session: filter
+  prompt: |
+    Hi! 👋 Thanks for your interest!
+    Can I confirm your full name?
+  
+step wait_name:
+  await user_reply
+  save: "lead_name"
+
+step ask_need:
+  prompt: "Great, thanks {{lead_name}}! What specifically are you interested in or need help with?"
+  await user_reply
+  save: "lead_need"
+
+step ask_urgency:
+  prompt: "Perfect! Is this time-sensitive? Do you need immediate assistance?"
+  await user_reply
+  save: "lead_urgency"
+
+step ask_context:
+  prompt: "Are you looking for personal use or for a company/team?"
+  await user_reply
+  save: "lead_context"
+
+step ask_budget:
+  prompt: "Do you have a rough budget range in mind? This helps us provide the most relevant information."
+  await user_reply
+  save: "lead_budget"
+
+step summarize:
+  session: summarizer
+  prompt: |
+    Create a summary of this lead:
+    - Name: {{lead_name}}
+    - Need: {{lead_need}}
+    - Urgency: {{lead_urgency}}
+    - Context: {{lead_context}}
+    - Budget: {{lead_budget}}
+  
+  save: "summary"
+
+step inform_lead:
+  session: filter
+  prompt: |
+    Perfect! Let me summarize:
+    {{summary}}
+    
+    Great! A specialist will reach out to you within 24 hours. 
+    Thank you for your time!
+
+step handover_to_human:
+  # This would trigger a tool to notify human agent
+  # For now, log the qualified lead
+  prompt: |
+    Lead qualified and ready for handover:
+    Phone: {{phone}}
+    {{summary}}
+  
+  # In production, this would call a tool like:
+  # tool: notify_human_agent
+  # args:
+  #   phone: {{phone}}
+  #   summary: {{summary}}
+
+# End workflow
+output:
+  qualified: true
+  lead_phone: {{phone}}
+  lead_summary: {{summary}}

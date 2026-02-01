@@ -1,0 +1,170 @@
+{
+  // OpenClaw Configuration for WhatsApp Lead Automation
+  
+  // Gateway settings
+  "gateway": {
+    "port": 18789,
+    "host": "0.0.0.0",
+    "auth": {
+      "enabled": true,
+      "token": "GENERATE_SECURE_TOKEN_HERE"
+    }
+  },
+
+  // Model configuration
+  "models": {
+    "default": "anthropic/claude-sonnet-4-5-20250929",
+    "providers": {
+      "anthropic": {
+        "apiKey": "${ANTHROPIC_API_KEY}"
+      }
+    }
+  },
+
+  // Agents configuration
+  "agents": {
+    "list": [
+      {
+        "id": "filter",
+        "name": "Filter Agent",
+        "workspace": "~/.openclaw/workspace-filter",
+        "model": "anthropic/claude-sonnet-4-5-20250929",
+        "description": "Qualifies leads before human handover"
+      },
+      {
+        "id": "human",
+        "name": "Human Agent",
+        "workspace": "~/.openclaw/workspace-human",
+        "model": "anthropic/claude-sonnet-4-5-20250929",
+        "description": "Main agent for qualified leads"
+      }
+    ],
+    "defaults": {
+      "heartbeat": {
+        "every": "0m"
+      },
+      "session": {
+        "ttl": "48h",
+        "maxTurns": 30
+      },
+      "tools": {
+        "allow": [
+          "sessions_send",
+          "sessions_list"
+        ],
+        "deny": [
+          "bash",
+          "file_*",
+          "browser"
+        ]
+      }
+    }
+  },
+
+  // Channel bindings (routing rules)
+  "bindings": [
+    // All new WhatsApp DMs go to filter agent first
+    {
+      "agentId": "filter",
+      "priority": 100,
+      "match": {
+        "channel": "whatsapp",
+        "peer": {
+          "kind": "dm"
+        }
+      }
+    },
+    // Specific qualified numbers can be routed to human agent
+    // Add after manual qualification approval
+    {
+      "agentId": "human",
+      "priority": 200,
+      "match": {
+        "channel": "whatsapp",
+        "peer": {
+          "kind": "dm",
+          "id": "+31612345678"  // Example: replace with actual qualified numbers
+        }
+      }
+    }
+  ],
+
+  // WhatsApp channel configuration
+  "channels": {
+    "whatsapp": {
+      // DM policy: require approval for unknown senders
+      "dmPolicy": "pairing",
+      
+      // Allow specific numbers (testing/known contacts)
+      "allowFrom": [
+        "+31612345678"  // Add your test numbers here
+      ],
+      
+      // Self-chat mode (if using personal WhatsApp)
+      "selfChatMode": false,
+      
+      // Capabilities
+      "capabilities": {
+        "multiDevice": true,
+        "reactions": true
+      },
+      
+      // Acknowledgment reaction
+      "ackReaction": "👍"
+    }
+  },
+
+  // Skills configuration
+  "skills": {
+    "spreadsheet-trigger": {
+      "enabled": true,
+      "googleSheetId": "${GOOGLE_SHEET_ID}",
+      "googleCredsPath": "./google-credentials.json",
+      "checkInterval": 30,
+      "rateLimit": {
+        "messagesPerMinute": 30,
+        "delayBetweenMessages": 2000
+      }
+    }
+  },
+
+  // Plugins
+  "plugins": {
+    "enabled": [
+      "open-prose"
+    ]
+  },
+
+  // Workspace
+  "workspace": {
+    "path": "~/.openclaw/workspace",
+    "skills": "~/.openclaw/workspace/skills"
+  },
+
+  // Logging
+  "logging": {
+    "level": "info",
+    "format": "pretty",
+    "destinations": [
+      {
+        "type": "file",
+        "path": "~/.openclaw/logs/gateway.log"
+      },
+      {
+        "type": "console"
+      }
+    ]
+  },
+
+  // Health checks
+  "health": {
+    "enabled": true,
+    "interval": "5m",
+    "checks": [
+      "gateway",
+      "channels",
+      "agents",
+      "models"
+    ]
+  }
+}

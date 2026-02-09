@@ -3,78 +3,69 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
-Dit project automatiseert WhatsApp messaging via OpenClaw voor lead management en CRM integratie. Het systeem handelt inkomende berichten af, valideert leads, en synchroniseert met CRM systemen.
+Dit project automatiseert WhatsApp messaging via OpenClaw voor lead management. Het systeem kwalificeert inkomende leads via een filter agent en stuurt ze door naar een menselijke agent.
 
 ## Tech Stack
 - **Runtime:** Node.js 18+
-- **Language:** TypeScript 5.3
-- **Framework:** OpenClaw (agent orchestration), Lobster (workflow), Baileys (WhatsApp)
-- **Validation:** Zod 3.22+
+- **Language:** JavaScript (CommonJS)
+- **Framework:** OpenClaw (agent orchestration), Open Prose (workflow)
 - **LLM:** Claude Sonnet 4.5
 
 ## Architecture
-WhatsApp message → Plugin hook → Lead Intake Agent → Lobster Workflow → CRM API
+WhatsApp message → OpenClaw binding → Filter Agent → Prose Workflow → Human Agent handover
 
 ## Core Files
-- `lead-automation-plugin.ts` - Main plugin entry point
-- `lead-workflow.lobster` - Lobster workflow definition
-- `lead-agent-config.yaml` - Agent configuration
-- `whatsapp-channel-config.yaml` - WhatsApp routing config
-- `crm-lead-cli.js` - CLI tool for CRM operations
-- `.env.template` - Environment variables template
+- `config/openclaw.json` - OpenClaw gateway and agent configuration
+- `workspace/skills/spreadsheet-trigger/trigger.js` - Google Sheets trigger skill
+- `workspace/skills/spreadsheet-trigger/SKILL.md` - Skill documentation
+- `workspace-filter/AGENTS.md` - Filter agent prompt and qualification flow
+- `workspace-filter/SOUL.md` - Filter agent personality and tone
+- `workspace-filter/.prose/filter-handover.prose` - Lead qualification workflow
 
 ## Environment Variables
 ```
-OPENCLAW_AUTH_SECRET=your_secret
-CRM_API_URL=https://your-crm.com
-CRM_API_KEY=your_key
-SALES_GROUP_JID=whatsapp_group_id
-AUTO_APPROVE_LEADS=true/false
+ANTHROPIC_API_KEY=your_api_key
+GOOGLE_SHEET_ID=your_sheet_id
+GOOGLE_CREDS_PATH=./google-credentials.json
 ```
 
 ## Key Patterns
-- **Lead validation:** Zod schemas, phone must be E.164 format
-- **Approval gate:** Manual approval for leads scoring >= 70
-- **CRM retry:** Exponential backoff (3 attempts, 5s initial delay)
+- **Lead qualification:** Filter agent asks 5 questions before handover
+- **Phone validation:** E.164 format required (`+` followed by 1-15 digits)
+- **Rate limiting:** 2 second delay between WhatsApp messages
 - **Session isolation:** Per-account-channel-peer WhatsApp sessions
-- **GDPR compliance:** Session indexing disabled, minimal data in memory
-
-## Infrastructure
-- Docker Compose setup (CRM mock, OpenClaw gateway, nginx proxy)
-- Rate limiting (10 req/s/IP), TLS 1.2+, WebSocket support
+- **Routing:** DMs go to filter agent (priority 100), qualified numbers route to human agent (priority 200)
 
 ## Coding Guidelines
 - Use async/await for all async operations
-- Add comprehensive error handling for API calls
-- Validate all inputs with Zod schemas
-- Follow TypeScript strict mode
-- Add JSDoc comments for exported functions
-- Test with mock CRM before production
+- Add error handling for external API calls
+- Validate phone numbers as E.164 before sending
+- Use `execFile` (not `exec`) for shell commands to prevent injection
+- Test with WhatsApp test account before production
 
 ## Testing
 ```bash
-# Test CLI
-node crm-lead-cli.js upsert --json '{"name":"Test","phone":"+1234567890"}'
+# Run spreadsheet trigger manually
+node workspace/skills/spreadsheet-trigger/trigger.js
 
-# Check logs
-docker-compose logs -f
+# Validate openclaw.json
+python3 -c "import json; json.load(open('config/openclaw.json'))"
 ```
 
 ## Security Notes
-- Never commit `.env` file
+- Never commit `.env` or `google-credentials.json`
 - Use E.164 format for phone numbers
-- Enable AUTO_APPROVE_LEADS=false in production
-- Review GDPR compliance requirements
+- Use `execFile` instead of `exec` for shell commands (no shell interpolation)
+- Gateway auth token must be replaced before deployment
 
 ## Development Workflow
-1. Make changes in TypeScript files
-2. Plugin compiles automatically
-3. Test with WhatsApp test account
-4. Verify CRM integration
-5. Check Lobster workflow execution
+1. Edit agent prompts in `workspace-filter/`
+2. Edit skill logic in `workspace/skills/`
+3. Update routing in `config/openclaw.json`
+4. Test with WhatsApp test account
+5. Check OpenClaw logs
 
 ## Common Issues
-- Phone format errors → Use E.164 format
-- CRM timeouts → Check network/API limits
+- Phone format errors → Use E.164 format (`+31612345678`)
+- Invalid config → Ensure `openclaw.json` has no comments (must be valid JSON)
 - Session problems → Clear WhatsApp auth cache
-- Memory leaks → Session isolation is enabled

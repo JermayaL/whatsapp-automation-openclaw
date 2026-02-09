@@ -5,9 +5,9 @@
  */
 
 const fs = require('fs');
-const { exec } = require('child_process');
+const { execFile } = require('child_process');
 const util = require('util');
-const execPromise = util.promisify(exec);
+const execFilePromise = util.promisify(execFile);
 
 // Load config from OpenClaw
 const config = {
@@ -15,6 +15,11 @@ const config = {
   googleCredsPath: process.env.GOOGLE_CREDS_PATH || './google-credentials.json',
   processedFile: './processed-leads.json',
 };
+
+// Validate E.164 phone number format
+function isValidE164(phone) {
+  return /^\+[1-9]\d{1,14}$/.test(phone);
+}
 
 // Load processed leads
 function loadProcessed() {
@@ -56,7 +61,7 @@ async function getNewLeads() {
         interest: row.Interest || '',
         _row: row,
       }))
-      .filter(lead => lead.phone && lead.name);
+      .filter(lead => lead.phone && lead.name && isValidE164(lead.phone));
   } catch (error) {
     console.error('Error reading Google Sheets:', error.message);
     return [];
@@ -72,10 +77,13 @@ Thanks for your interest${lead.interest ? ` in ${lead.interest}` : ''}. I'd love
 Do you have a few minutes to chat?`;
 
   try {
-    const { stdout } = await execPromise(
-      `openclaw message send --channel whatsapp --target "${lead.phone}" --message "${message.replace(/"/g, '\\"')}"`
-    );
-    
+    await execFilePromise('openclaw', [
+      'message', 'send',
+      '--channel', 'whatsapp',
+      '--target', lead.phone,
+      '--message', message,
+    ]);
+
     console.log(`✅ Sent to ${lead.name} (${lead.phone})`);
     return { success: true };
   } catch (error) {

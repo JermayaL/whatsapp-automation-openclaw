@@ -1,7 +1,4 @@
 {
-  // OpenClaw Configuration for WhatsApp Lead Automation
-  
-  // Gateway settings
   "gateway": {
     "port": 18789,
     "host": "0.0.0.0",
@@ -11,7 +8,6 @@
     }
   },
 
-  // Model configuration
   "models": {
     "default": "anthropic/claude-sonnet-4-5-20250929",
     "providers": {
@@ -21,7 +17,6 @@
     }
   },
 
-  // Agents configuration
   "agents": {
     "list": [
       {
@@ -61,9 +56,7 @@
     }
   },
 
-  // Channel bindings (routing rules)
   "bindings": [
-    // All new WhatsApp DMs go to filter agent first
     {
       "agentId": "filter",
       "priority": 100,
@@ -74,8 +67,6 @@
         }
       }
     },
-    // Specific qualified numbers can be routed to human agent
-    // Add after manual qualification approval
     {
       "agentId": "human",
       "priority": 200,
@@ -83,38 +74,27 @@
         "channel": "whatsapp",
         "peer": {
           "kind": "dm",
-          "id": "+31612345678"  // Example: replace with actual qualified numbers
+          "id": "+31612345678"
         }
       }
     }
   ],
 
-  // WhatsApp channel configuration
   "channels": {
     "whatsapp": {
-      // DM policy: require approval for unknown senders
       "dmPolicy": "pairing",
-      
-      // Allow specific numbers (testing/known contacts)
       "allowFrom": [
-        "+31612345678"  // Add your test numbers here
+        "+31612345678"
       ],
-      
-      // Self-chat mode (if using personal WhatsApp)
       "selfChatMode": false,
-      
-      // Capabilities
       "capabilities": {
         "multiDevice": true,
         "reactions": true
       },
-      
-      // Acknowledgment reaction
       "ackReaction": "👍"
     }
   },
 
-  // Skills configuration
   "skills": {
     "spreadsheet-trigger": {
       "enabled": true,
@@ -128,20 +108,17 @@
     }
   },
 
-  // Plugins
   "plugins": {
     "enabled": [
       "open-prose"
     ]
   },
 
-  // Workspace
   "workspace": {
     "path": "~/.openclaw/workspace",
     "skills": "~/.openclaw/workspace/skills"
   },
 
-  // Logging
   "logging": {
     "level": "info",
     "format": "pretty",
@@ -156,7 +133,6 @@
     ]
   },
 
-  // Health checks
   "health": {
     "enabled": true,
     "interval": "5m",
